@@ -15,7 +15,9 @@ const app = express();
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.text());
-
+app.get('/' ,(req,res)=>{
+    res.send('Welcome to Company API');
+})
 app.use("/api",apiRouter);
 
 app.use(errorHandler);
