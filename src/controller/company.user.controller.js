@@ -13,58 +13,44 @@ class CompanyUserController {
 
   async registerUser(req, res, next) {
     try {
-      const { user, otp, token } =
-        await this.companyUserService.companyUserRegister(req.body);
+        const { user, otp, token } = await this.companyUserService.companyUserRegister(req.body);
 
-      //email sending logic for register
+        // Send email
+        try {
+            await this.sendEmailWithOTP(user.email, otp);
+        } catch (emailError) {
+            logger.error("Error sending email", emailError);
+            // Optionally handle email error (e.g., respond with a warning)
+        }
 
-      const htmlFilePath = path.join(
-        process.cwd(),
-        "src/email-templates",
-        "otp.html"
-      );
-      let htmlContent = fs.readFileSync(htmlFilePath, "utf8");
-      htmlContent = htmlContent.replace(
-        /<h1>[\s\d]*<\/h1>/g,
-        `<h1>${otp}</h1>`
-      );
-      htmlContent = htmlContent.replace(
-        /usingyouremail@gmail\.com/g,
-        user.email
-      );
-
-      let transporter = nodemailer.createTransport({
-        service: "gmail",
-        auth: {
-          user: EMAIL,
-          pass: EMAIL_PASSWORD,
-        },
-        tls: {
-          rejectUnauthorized: false, 
-        },
-      });
-
-      let mailOptions = {
-        from: process.env.EMAIL,
-        to: user.email,
-        subject: "Verify your email",
-        html: htmlContent,
-      };
-
-      await transporter.sendMail(mailOptions);
-
-      return res.status(StatusCodes.CREATED).json({
-        success: true,
-        message: "Created User Successfully",
-        otp,
-        token,
-        user,
-      });
+        return res.status(StatusCodes.CREATED).json({
+            success: true,
+            message: "Created User Successfully",
+            otp,
+            token,
+            user,
+        });
     } catch (err) {
+        logger.error("Registration error", err);
         next(err);
     }
-  }
+}
 
+async sendEmailWithOTP(email, otp) {
+    const htmlFilePath = path.join(process.cwd(), "src/email-templates", "otp.html");
+    let htmlContent = fs.readFileSync(htmlFilePath, "utf8");
+    htmlContent = htmlContent.replace(/<h1>[\s\d]*<\/h1>/g, `<h1>${otp}</h1>`);
+    htmlContent = htmlContent.replace(/usingyouremail@gmail\.com/g, email);
+
+    const mailOptions = {
+        from: process.env.EMAIL,
+        to: email,
+        subject: "Verify your email",
+        html: htmlContent,
+    };
+
+    await transporter.sendMail(mailOptions); // Handle this separately if needed
+}
 
   async loginUser(req, res) {
     try {
